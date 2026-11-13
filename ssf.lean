@@ -10,25 +10,25 @@ def mulPow2 (N t : ℕ) (x : ZMod (2^N + 1)) : ZMod (2^N + 1) :=
 def mulPow2Inv (N t : ℕ) (x : ZMod (2^N + 1)) : ZMod (2^N + 1) :=
   (((BitVec.ofNat (2 * N) x.val).rotateRight t).toNat : ℕ)
 
-def fft (N K ω : ℕ) (u : Vector (ZMod (2^N + 1)) K) : Vector (ZMod (2^N + 1)) K :=
-  if h : K ≤ 1 then u else Id.run do
+def fft (N K ω : ℕ) (v : Vector (ZMod (2^N + 1)) K) : Vector (ZMod (2^N + 1)) K :=
+  if h : K ≤ 1 then v else Id.run do
     let half := K / 2
-    let e : Vector (ZMod (2^N + 1)) half := Vector.ofFn fun j => u[2 * j.val]'(by omega)
-    let o : Vector (ZMod (2^N + 1)) half := Vector.ofFn fun j => u[2 * j.val + 1]'(by omega)
-    let ê := fft N half (2 * ω) e
-    let ô := fft N half (2 * ω) o
-    let mut û : Vector (ZMod (2^N + 1)) K := Vector.replicate K 0
+    let e : Vector (ZMod (2^N + 1)) half := Vector.ofFn fun j => v[2 * j.val]'(by omega)
+    let o : Vector (ZMod (2^N + 1)) half := Vector.ofFn fun j => v[2 * j.val + 1]'(by omega)
+    let e_hat := fft N half (2 * ω) e
+    let o_hat := fft N half (2 * ω) o
+    let mut v_hat : Vector (ZMod (2^N + 1)) K := Vector.replicate K 0
     for j in List.finRange half do
-      let p := ê[j]
-      let q := mulPow2 N (j.val * ω) ô[j]
-      û := û.set j.val (p + q) (by omega)
-      û := û.set (j.val + half) (p - q) (by omega)
-    return û
+      let p := e_hat[j]
+      let q := mulPow2 N (j.val * ω) o_hat[j]
+      v_hat := v_hat.set j.val (p + q) (by omega)
+      v_hat := v_hat.set (j.val + half) (p - q) (by omega)
+    return v_hat
 termination_by K
 decreasing_by all_goals omega
 
-def ifft (N k ω : ℕ) (u : Vector (ZMod (2^N + 1)) (2^k)) : Vector (ZMod (2^N + 1)) (2^k) :=
-  Vector.ofFn fun j => mulPow2Inv N k (fft N (2^k) (2 * N - ω) u)[j]
+def ifft (N k ω : ℕ) (v : Vector (ZMod (2^N + 1)) (2^k)) : Vector (ZMod (2^N + 1)) (2^k) :=
+  Vector.ofFn fun j => mulPow2Inv N k (fft N (2^k) (2 * N - ω) v)[j]
 
 def SuitableN' (n k M n' : ℕ) : Prop :=
   2 * M + k ≤ n' ∧ 2^k ∣ n' ∧ n' < n
@@ -81,21 +81,21 @@ def ssf (sel : ∀ n, good_n n → Params n) (n : ℕ) (hn : good_n n) (a b : ZM
   if h16 : n ≤ 16 then a * b else
     let ⟨k, M, n', hKM, hn'⟩ := sel n hn
     let K := 2^k
-    let av : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => ((a.val / 2^(j.val * M)) % 2^M : ℕ)
-    let bv : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => ((b.val / 2^(j.val * M)) % 2^M : ℕ)
+    let A : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => ((a.val / 2^(j.val * M)) % 2^M : ℕ)
+    let B : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => ((b.val / 2^(j.val * M)) % 2^M : ℕ)
     let ψ := n' / K
     let ω := 2 * ψ
-    let a' : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => mulPow2 n' (j.val * ψ) av[j]
-    let b' : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => mulPow2 n' (j.val * ψ) bv[j]
-    let A' := fft n' K ω a'
-    let B' := fft n' K ω b'
-    let C' : Vector (ZMod (2^n' + 1)) K :=
-      Vector.ofFn fun j => ssf sel n' (good_n_next (by omega) hKM hn') A'[j] B'[j]
-    let c' : Vector (ZMod (2^n' + 1)) K := ifft n' k ω C'
-    let cv : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => mulPow2Inv n' (j.val * ψ) c'[j]
-    let cℤ : Vector ℤ K := Vector.ofFn fun j =>
-      if cv[j].val ≥ (j.val + 1) * 2^(2 * M) then cv[j].val - (2^n' + 1) else cv[j].val
-    ((∑ j : Fin K, cℤ[j] * 2^(j.val * M) : ℤ) : ZMod (2^n + 1))
+    let A' : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => mulPow2 n' (j.val * ψ) A[j]
+    let B' : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => mulPow2 n' (j.val * ψ) B[j]
+    let A'_hat := fft n' K ω A'
+    let B'_hat := fft n' K ω B'
+    let C'_hat : Vector (ZMod (2^n' + 1)) K :=
+      Vector.ofFn fun j => ssf sel n' (good_n_next (by omega) hKM hn') A'_hat[j] B'_hat[j]
+    let C' : Vector (ZMod (2^n' + 1)) K := ifft n' k ω C'_hat
+    let C : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => mulPow2Inv n' (j.val * ψ) C'[j]
+    let Cℤ : Vector ℤ K := Vector.ofFn fun j =>
+      if C[j].val ≥ (j.val + 1) * 2^(2 * M) then C[j].val - (2^n' + 1) else C[j].val
+    ((∑ j : Fin K, Cℤ[j] * 2^(j.val * M) : ℤ) : ZMod (2^n + 1))
 termination_by n
 decreasing_by
   exact hn'.2.2
@@ -671,7 +671,7 @@ theorem ssf_eq (sel : ∀ n, good_n n → Params n) (n : ℕ) (hn : good_n n) (a
   · obtain ⟨k, M, n', hnKM, hn'⟩ := sel n hn
     dsimp -zeta only
     lift_lets
-    extract_lets K av bv ψ ω a' b' A' B' C' c' cv cℤ
+    extract_lets K A B ψ ω A' B' A'_hat B'_hat C'_hat C' C Cℤ
     have hMk : 2 * M + k ≤ n' := hn'.1
     have hdvd : 2^k ∣ n' := hn'.2.1
     have hlt : n' < n := hn'.2.2
@@ -693,47 +693,47 @@ theorem ssf_eq (sel : ∀ n, good_n n → Params n) (n : ℕ) (hn : good_n n) (a
       rw [← hnKM]; have := ZMod.val_lt a; omega
     have hb' : b.val < 2^(2^k * M) := by
       rw [← hnKM]; have := ZMod.val_lt b; omega
-    have hva' : ∀ j (hj : j < 2^k), vfun a' j
+    have hvA' : ∀ j (hj : j < 2^k), vfun A' j
         = mulPow2 n' (j * ψ) ((a.val / 2^(j * M) % 2^M : ℕ) : ZMod (2^n' + 1)) := by
       intro j hj
-      simp only [a', av, vfun_ofFn _ _ hj, Vector.getElem_ofFn, Fin.getElem_fin]
-    have hvb' : ∀ j (hj : j < 2^k), vfun b' j
+      simp only [A', A, vfun_ofFn _ _ hj, Vector.getElem_ofFn, Fin.getElem_fin]
+    have hvB' : ∀ j (hj : j < 2^k), vfun B' j
         = mulPow2 n' (j * ψ) ((b.val / 2^(j * M) % 2^M : ℕ) : ZMod (2^n' + 1)) := by
       intro j hj
-      simp only [b', bv, vfun_ofFn _ _ hj, Vector.getElem_ofFn, Fin.getElem_fin]
-    have hC' : C' = Vector.ofFn fun j => A'[j] * B'[j] := by
-      simp only [C', IH n' hlt]
-    have hcv : ∀ j (hj : j < 2^k), cv[j]
+      simp only [B', B, vfun_ofFn _ _ hj, Vector.getElem_ofFn, Fin.getElem_fin]
+    have hC'_hat : C'_hat = Vector.ofFn fun j => A'_hat[j] * B'_hat[j] := by
+      simp only [C'_hat, IH n' hlt]
+    have hC : ∀ j (hj : j < 2^k), C[j]
         = (convPos (2^k) (fun j => a.val / 2^(j * M) % 2^M) (fun j => b.val / 2^(j * M) % 2^M) j
             : ZMod (2^n' + 1))
           - (convNeg (2^k) (fun j => a.val / 2^(j * M) % 2^M) (fun j => b.val / 2^(j * M) % 2^M) j
             : ZMod (2^n' + 1)) := by
       intro j hj
-      simp only [cv, Vector.getElem_ofFn, Fin.getElem_fin, c', hC', A', B', K]
-      have key := ifft_fft_mul_fft n' k ω hN hk hkN he hω a' b' j hj
+      simp only [C, Vector.getElem_ofFn, Fin.getElem_fin, C', hC'_hat, A'_hat, B'_hat, K]
+      have key := ifft_fft_mul_fft n' k ω hN hk hkN he hω A' B' j hj
       simp only [Fin.getElem_fin] at key
       rw [key]
       rw [sum_congr rfl fun j hj => sum_congr rfl fun l hl => by
-        rw [hva' j (mem_range.mp hj), hvb' l (mem_range.mp hl)]]
+        rw [hvA' j (mem_range.mp hj), hvB' l (mem_range.mp hl)]]
       exact untwist n' k ψ hN hψ _ _ j hj
-    have hcℤ : ∀ j (hj : j < 2^k), cℤ[j]
+    have hCℤ : ∀ j (hj : j < 2^k), Cℤ[j]
         = (convPos (2^k) (fun j => a.val / 2^(j * M) % 2^M) (fun j => b.val / 2^(j * M) % 2^M) j : ℤ)
           - (convNeg (2^k) (fun j => a.val / 2^(j * M) % 2^M) (fun j => b.val / 2^(j * M) % 2^M) j
             : ℤ) := by
       intro j hj
-      simp only [cℤ, Vector.getElem_ofFn, Fin.getElem_fin]
+      simp only [Cℤ, Vector.getElem_ofFn, Fin.getElem_fin]
       exact unwrap n' (2^k) M k j rfl hMk hj _ _
-        (convPos_lt (2^k) M j _ _ hA hB hj) (convNeg_le (2^k) M j _ _ hA hB hj) _ (hcv j hj)
+        (convPos_lt (2^k) M j _ _ hA hB hj) (convNeg_le (2^k) M j _ _ hA hB hj) _ (hC j hj)
     rw [Finset.sum_fin_eq_sum_range]
     have hsum : ∀ j ∈ range K,
-        (if h : j < K then cℤ[(⟨j, h⟩ : Fin K)] * 2^((⟨j, h⟩ : Fin K).val * M) else 0)
+        (if h : j < K then Cℤ[(⟨j, h⟩ : Fin K)] * 2^((⟨j, h⟩ : Fin K).val * M) else 0)
         = ((convPos (2^k) (fun j => a.val / 2^(j * M) % 2^M) (fun j => b.val / 2^(j * M) % 2^M) j : ℤ)
             - (convNeg (2^k) (fun j => a.val / 2^(j * M) % 2^M) (fun j => b.val / 2^(j * M) % 2^M) j
               : ℤ)) * 2^(j * M) := by
       intro j hj
       rw [dite_eq_left (mem_range.mp hj)]
       simp only [Fin.getElem_fin]
-      rw [hcℤ j (mem_range.mp hj)]
+      rw [hCℤ j (mem_range.mp hj)]
     rw [sum_congr rfl hsum]
     rw [recompose n (2^k) M k rfl hnKM, ← digits_eq a.val (2^k) M ha',
       ← digits_eq b.val (2^k) M hb', ZMod.natCast_zmod_val, ZMod.natCast_zmod_val]

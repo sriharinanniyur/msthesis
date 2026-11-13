@@ -1,4 +1,4 @@
--- Co-authored by: Aristotle, GPT-5, and Fable 5.1
+-- Co-authored by: Aristotle and GPT-5
 
 import Mathlib
 

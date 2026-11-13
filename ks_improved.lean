@@ -1,9 +1,9 @@
 -- Co-authored by: Fable 5.1
 
-def ks_improved (β m : Nat) (w : Array Nat) : Array Nat := Id.run do
-  let n := w.size - m
-  let x := w.extract 0 m
-  let mut w := w
+def ks_improved (β m : Nat) (W : Array Nat) : Array Nat := Id.run do
+  let n := W.size - m
+  let x := W.extract 0 m
+  let mut w := W
   for j in [0:m] do
     w := w.set! j 0
   for i in [0:n] do
@@ -43,11 +43,11 @@ def outerStep (β m : Nat) (x : Array Nat) (w : Array Nat) (i : Nat) : Array Nat
   let r := List.foldl (innerStep β x (w[m + i]!) i) (w, 0) (List.range' 0 m)
   r.1.setIfInBounds (i + m) r.2
 
-theorem ks_improved_eq (β m : Nat) (w : Array Nat) :
-    ks_improved β m w =
-      List.foldl (outerStep β m (w.extract 0 m))
-        (List.foldl (fun b a => b.setIfInBounds a 0) w (List.range' 0 m))
-        (List.range' 0 (w.size - m)) := by
+theorem ks_improved_eq (β m : Nat) (W : Array Nat) :
+    ks_improved β m W =
+      List.foldl (outerStep β m (W.extract 0 m))
+        (List.foldl (fun b a => b.setIfInBounds a 0) W (List.range' 0 m))
+        (List.range' 0 (W.size - m)) := by
   simp [ks_improved]
   rfl
 
@@ -266,121 +266,23 @@ theorem clear_loop (β m : Nat) (w : Array Nat) (hm : m ≤ w.size) (hw : ∀ d 
   obtain ⟨hlen, hlt, hdrop, hval⟩ := this
   exact ⟨hlen, hlt, by simpa using hdrop, by simpa using hval⟩
 
-theorem ks_improved_correct (β m : Nat) (w : Array Nat)
-    (hβ : 2 ≤ β) (hm : m ≤ w.size) (hw : ∀ d ∈ w.toList, d < β) :
-    (ks_improved β m w).size = w.size ∧
-    (∀ d ∈ (ks_improved β m w).toList, d < β) ∧
-    ofDigits β (ks_improved β m w).toList =
-      ofDigits β (w.toList.take m) * ofDigits β (w.toList.drop m) := by
+theorem ks_improved_correct (β m : Nat) (W : Array Nat)
+    (hβ : 2 ≤ β) (hm : m ≤ W.size) (hw : ∀ d ∈ W.toList, d < β) :
+    (ks_improved β m W).size = W.size ∧
+    (∀ d ∈ (ks_improved β m W).toList, d < β) ∧
+    ofDigits β (ks_improved β m W).toList =
+      ofDigits β (W.toList.take m) * ofDigits β (W.toList.drop m) := by
   rw [ks_improved_eq]
-  have hfin := foldl_range'_inv (OuterInv β m w.toList (ofDigits β (w.toList.take m)))
-    (outerStep β m (w.extract 0 m)) (w.size - m) _
-    (clear_loop β m w hm hw hβ)
-    (fun i A hi hA => outer_step β m w.toList (w.extract 0 m) hβ
+  have hfin := foldl_range'_inv (OuterInv β m W.toList (ofDigits β (W.toList.take m)))
+    (outerStep β m (W.extract 0 m)) (W.size - m) _
+    (clear_loop β m W hm hw hβ)
+    (fun i A hi hA => outer_step β m W.toList (W.extract 0 m) hβ
       (by simp [List.extract_eq_take_drop])
       (by simpa using hm) hw i (by simpa using hi) A hA)
-  generalize List.foldl (outerStep β m (w.extract 0 m)) _ (List.range' 0 (w.size - m)) = r at hfin
+  generalize List.foldl (outerStep β m (W.extract 0 m)) _ (List.range' 0 (W.size - m)) = r at hfin
   obtain ⟨hlen, hlt, -, hval⟩ := hfin
   refine ⟨by simpa using hlen, hlt, ?_⟩
-  have hlenw : w.toList.length = w.size := Array.length_toList
-  rw [show m + (w.size - m) = r.toList.length by omega, List.take_length,
-    show w.size - m = (w.toList.drop m).length by simp, List.take_length] at hval
+  have hlenW : W.toList.length = W.size := Array.length_toList
+  rw [show m + (W.size - m) = r.toList.length by omega, List.take_length,
+    show W.size - m = (W.toList.drop m).length by simp, List.take_length] at hval
   exact hval
-
-theorem getElem!_lt {β : Nat} {a : Array Nat} (ha : ∀ d ∈ a.toList, d < β) (hβ : 0 < β) (i : Nat) :
-    a[i]! < β := by
-  rw [Array.getElem!_eq_getD, Array.getD_eq_getD_getElem?]
-  cases h : a[i]? with
-  | none => exact hβ
-  | some d => exact ha d (by simpa using Array.mem_of_getElem? h)
-
-theorem digits_set {β : Nat} {a : Array Nat} (ha : ∀ d ∈ a.toList, d < β) {i v : Nat} (hv : v < β) :
-    ∀ d ∈ (a.set! i v).toList, d < β := by
-  intro d hd
-  simp only [Array.set!, Array.toList_setIfInBounds] at hd
-  rcases List.mem_or_eq_of_mem_set hd with h | h
-  · exact ha d h
-  · rw [h]; exact hv
-
-def ks_improved_checked (β m : Nat) (hβ : 0 < β) (w : Array Nat) (hw : ∀ d ∈ w.toList, d < β) :
-    Array Nat := Id.run do
-  let n := w.size - m
-  let x := w.extract 0 m
-  have hx : ∀ d ∈ x.toList, d < β := fun d hd => hw d (by
-    simp only [x, Array.toList_extract, List.extract_eq_take_drop] at hd
-    exact List.mem_of_mem_drop (List.mem_of_mem_take hd))
-  let mut w : {w : Array Nat // ∀ d ∈ w.toList, d < β} := ⟨w, hw⟩
-  for j in [0:m] do
-    w := ⟨w.1.set! j 0, digits_set w.2 hβ⟩
-  for i in [0:n] do
-    let yi := w.1[m + i]!
-    have hyi : yi < β := getElem!_lt w.2 hβ _
-    let mut c : {c : Nat // c < β} := ⟨0, hβ⟩
-    for j in [0:m] do
-      let k := i + j
-      let t := x[j]! * yi + w.1[k]! + c.1
-      have hc : t / β < β := carry_lt (getElem!_lt hx hβ j) hyi (getElem!_lt w.2 hβ k) c.2
-      w := ⟨w.1.set! k (t % β), digits_set w.2 (Nat.mod_lt _ hβ)⟩
-      c := ⟨t / β, hc⟩
-    w := ⟨w.1.set! (i + m) c.1, digits_set w.2 c.2⟩
-  return w.1
-
-#eval ks_improved_checked 10 2 (by decide) #[4, 3, 2, 1] (by decide)
-
-abbrev Digits (β : Nat) := {w : Array Nat // ∀ d ∈ w.toList, d < β}
-
-def innerStepC (β : Nat) (hβ : 0 < β) (x : Array Nat) (hx : ∀ d ∈ x.toList, d < β)
-    (yi : Nat) (hyi : yi < β) (i : Nat) (s : Digits β × {c : Nat // c < β}) (j : Nat) :
-    Digits β × {c : Nat // c < β} :=
-  let t := x[j]! * yi + s.1.1[i + j]! + s.2.1
-  (⟨s.1.1.set! (i + j) (t % β), digits_set s.1.2 (Nat.mod_lt _ hβ)⟩,
-   ⟨t / β, carry_lt (getElem!_lt hx hβ j) hyi (getElem!_lt s.1.2 hβ (i + j)) s.2.2⟩)
-
-def outerStepC (β m : Nat) (hβ : 0 < β) (x : Array Nat) (hx : ∀ d ∈ x.toList, d < β)
-    (w : Digits β) (i : Nat) : Digits β :=
-  let r := List.foldl (innerStepC β hβ x hx (w.1[m + i]!) (getElem!_lt w.2 hβ _) i)
-    (w, ⟨0, hβ⟩) (List.range' 0 m)
-  ⟨r.1.1.set! (i + m) r.2.1, digits_set r.1.2 r.2.2⟩
-
-theorem ks_improved_checked_eq (β m : Nat) (hβ : 0 < β) (w : Array Nat)
-    (hw : ∀ d ∈ w.toList, d < β) :
-    ks_improved_checked β m hβ w hw =
-      (List.foldl (outerStepC β m hβ (w.extract 0 m) (fun d hd => hw d (by
-            simp only [Array.toList_extract, List.extract_eq_take_drop] at hd
-            exact List.mem_of_mem_drop (List.mem_of_mem_take hd))))
-        (List.foldl (fun (b : Digits β) a => ⟨b.1.set! a 0, digits_set b.2 hβ⟩) ⟨w, hw⟩
-          (List.range' 0 m))
-        (List.range' 0 (w.size - m))).1 := by
-  simp [ks_improved_checked]
-  rfl
-
-theorem innerStepC_val (β : Nat) (hβ : 0 < β) (x : Array Nat) (hx : ∀ d ∈ x.toList, d < β)
-    (yi : Nat) (hyi : yi < β) (i : Nat) (s : Digits β × {c : Nat // c < β}) (j : Nat) :
-    innerStep β x yi i (s.1.1, s.2.1) j =
-      ((innerStepC β hβ x hx yi hyi i s j).1.1, (innerStepC β hβ x hx yi hyi i s j).2.1) := rfl
-
-theorem outerStepC_val (β m : Nat) (hβ : 0 < β) (x : Array Nat) (hx : ∀ d ∈ x.toList, d < β)
-    (w : Digits β) (i : Nat) :
-    outerStep β m x w.1 i = (outerStepC β m hβ x hx w i).1 := by
-  simp only [outerStep, outerStepC, Array.set!]
-  rw [List.foldl_hom (fun s : Digits β × {c : Nat // c < β} => (s.1.1, s.2.1))
-    (g₁ := innerStepC β hβ x hx (w.1[m + i]!) (getElem!_lt w.2 hβ _) i)
-    (g₂ := innerStep β x (w.1[m + i]!) i) (init := (w, ⟨0, hβ⟩))
-    (fun s j => innerStepC_val β hβ x hx _ _ i s j)]
-
-theorem ks_improved_checked_val (β m : Nat) (hβ : 0 < β) (w : Array Nat)
-    (hw : ∀ d ∈ w.toList, d < β) :
-    ks_improved_checked β m hβ w hw = ks_improved β m w := by
-  rw [ks_improved_eq, ks_improved_checked_eq]
-  rw [← List.foldl_hom Subtype.val (g₂ := outerStep β m (w.extract 0 m))
-    (fun A i => outerStepC_val β m hβ _ _ A i)]
-  rw [← List.foldl_hom Subtype.val (g₂ := fun b a => b.setIfInBounds a 0) (fun b a => rfl)]
-
-theorem ks_improved_checked_correct (β m : Nat) (w : Array Nat)
-    (hβ : 2 ≤ β) (hm : m ≤ w.size) (hw : ∀ d ∈ w.toList, d < β) :
-    (ks_improved_checked β m (by omega) w hw).size = w.size ∧
-    (∀ d ∈ (ks_improved_checked β m (by omega) w hw).toList, d < β) ∧
-    ofDigits β (ks_improved_checked β m (by omega) w hw).toList =
-      ofDigits β (w.toList.take m) * ofDigits β (w.toList.drop m) := by
-  rw [ks_improved_checked_val]
-  exact ks_improved_correct β m w hβ hm hw

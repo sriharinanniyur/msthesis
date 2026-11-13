@@ -11,15 +11,15 @@ noncomputable def fft (K : ℕ) (ω : ℂ) (v : Vector ℂ K) : Vector ℂ K :=
     let half := K / 2
     let e : Vector ℂ half := Vector.ofFn fun i => v[2 * i.val]'(by omega)
     let o : Vector ℂ half := Vector.ofFn fun i => v[2 * i.val + 1]'(by omega)
-    let ehat := fft half (ω ^ 2) e
-    let ohat := fft half (ω ^ 2) o
-    let mut vhat : Vector ℂ K := Vector.replicate K 0
+    let e_hat := fft half (ω ^ 2) e
+    let o_hat := fft half (ω ^ 2) o
+    let mut v_hat : Vector ℂ K := Vector.replicate K 0
     for j in List.finRange half do
-      let p := ehat[j]
-      let q := ω ^ j.val * ohat[j]
-      vhat := vhat.set j.val (p + q) (by omega)
-      vhat := vhat.set (j.val + half) (p - q) (by omega)
-    return vhat
+      let p := e_hat[j]
+      let q := ω ^ j.val * o_hat[j]
+      v_hat := v_hat.set j.val (p + q) (by omega)
+      v_hat := v_hat.set (j.val + half) (p - q) (by omega)
+    return v_hat
 
 def decompose (l K a : ℕ) : Vector ℂ K :=
   Vector.ofFn fun j => (a / 2 ^ (j.val * l) % 2 ^ l : ℕ)
@@ -32,9 +32,9 @@ noncomputable def ssc (a b : ℤ) : ℤ :=
   let ω : ℂ := Complex.exp (2 * Real.pi * Complex.I / K)
   let A := decompose l K a.natAbs
   let B := decompose l K b.natAbs
-  let FA := fft K ω⁻¹ A
-  let FB := fft K ω⁻¹ B
-  let C := fft K ω (Vector.ofFn fun j => FA[j] * FB[j])
+  let A_hat := fft K ω⁻¹ A
+  let B_hat := fft K ω⁻¹ B
+  let C := fft K ω (Vector.ofFn fun j => A_hat[j] * B_hat[j])
   a.sign * b.sign * ((∑ j : Fin K, (round (C[j].re / K)).toNat * 2 ^ (j.val * l) : ℕ) : ℤ)
 
 theorem sum_range_two_mul {S : Type*} [AddCommMonoid S] {K m : ℕ} (hK : K = 2 * m) (f : ℕ → S) :
@@ -320,7 +320,7 @@ theorem recompose_linear (K l : ℕ) (x y : ℕ → ℕ) (h0 : ∀ j j', K ≤ j
 theorem ssc_eq (a b : ℤ) : ssc a b = a * b := by
   unfold ssc
   lift_lets
-  extract_lets n l k K ω A B FA FB C
+  extract_lets n l k K ω A B A_hat B_hat C
   have hl : 1 ≤ l := le_max_right _ _
   have hK : K = 2^k := rfl
   have hK0 : 0 < K := by positivity
@@ -378,7 +378,7 @@ theorem ssc_eq (a b : ℤ) : ssc a b = a * b := by
       = (K : ℂ)
         * ((∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then x j * y j' else 0 : ℕ) : ℂ) := by
     intro m hm
-    simp only [C, FA, FB]
+    simp only [C, A_hat, B_hat]
     rw [fft_mul_fft_inv k K ω hK hωK hω A B m hm]
     push_cast
     congr 1
