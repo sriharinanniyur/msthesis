@@ -1,3 +1,5 @@
+-- Co-authored by: Fable 5.1
+
 def ks_improved (β m : Nat) (w : Array Nat) : Array Nat := Id.run do
   let n := w.size - m
   let x := w.extract 0 m
