@@ -3,19 +3,19 @@
 def ks_improved (β m : Nat) (W : Array Nat) : Array Nat := Id.run do
   let n := W.size - m
   let x := W.extract 0 m
-  let mut w := W
+  let mut W := W
   for j in [0:m] do
-    w := w.set! j 0
+    W := W.set! j 0
   for i in [0:n] do
-    let yi := w[m + i]!
+    let yi := W[m + i]!
     let mut c := 0
     for j in [0:m] do
       let k := i + j
-      let t := x[j]! * yi + w[k]! + c
-      w := w.set! k (t % β)
+      let t := x[j]! * yi + W[k]! + c
+      W := W.set! k (t % β)
       c := t / β
-    w := w.set! (i + m) c
-  return w
+    W := W.set! (i + m) c
+  return W
 
 #eval ks_improved 10 2 #[4, 3, 2, 1]
 
@@ -267,7 +267,7 @@ theorem clear_loop (β m : Nat) (w : Array Nat) (hm : m ≤ w.size) (hw : ∀ d 
   exact ⟨hlen, hlt, by simpa using hdrop, by simpa using hval⟩
 
 theorem ks_improved_correct (β m : Nat) (W : Array Nat)
-    (hβ : 2 ≤ β) (hm : m ≤ W.size) (hw : ∀ d ∈ W.toList, d < β) :
+    (hβ : 2 ≤ β) (hm : 0 < m ∧ m < W.size) (hw : ∀ d ∈ W.toList, d < β) :
     (ks_improved β m W).size = W.size ∧
     (∀ d ∈ (ks_improved β m W).toList, d < β) ∧
     ofDigits β (ks_improved β m W).toList =
@@ -275,10 +275,10 @@ theorem ks_improved_correct (β m : Nat) (W : Array Nat)
   rw [ks_improved_eq]
   have hfin := foldl_range'_inv (OuterInv β m W.toList (ofDigits β (W.toList.take m)))
     (outerStep β m (W.extract 0 m)) (W.size - m) _
-    (clear_loop β m W hm hw hβ)
+    (clear_loop β m W (Nat.le_of_lt hm.2) hw hβ)
     (fun i A hi hA => outer_step β m W.toList (W.extract 0 m) hβ
       (by simp [List.extract_eq_take_drop])
-      (by simpa using hm) hw i (by simpa using hi) A hA)
+      (by simpa using (Nat.le_of_lt hm.2)) hw i (by simpa using hi) A hA)
   generalize List.foldl (outerStep β m (W.extract 0 m)) _ (List.range' 0 (W.size - m)) = r at hfin
   obtain ⟨hlen, hlt, -, hval⟩ := hfin
   refine ⟨by simpa using hlen, hlt, ?_⟩
