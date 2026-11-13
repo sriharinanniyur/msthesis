@@ -1,0 +1,13 @@
+name = "msthesis"
+version = "0.1.0"
+defaultTargets = ["msthesis"]
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "1b1ccf4b088b32fa3f23f2de1127433254a81e1e"
+
+[[lean_lib]]
+name = "msthesis"
+roots = ["ssc", "ssf", "karatsuba", "toom_cook"]
