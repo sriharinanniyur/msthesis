@@ -36,14 +36,14 @@ termination_by m
 decreasing_by exact Nat.div_lt_self (by omega) ‹_›
 
 
-theorem limb_bounds (β : Nat) (hβ : 2 ≤ β) (a : Int) (n : Nat) (ha : a.natAbs < β ^ n) :
+theorem limb_bounds (β : Nat) (hβ : 2 ≤ β) (x : Int) (n : Nat) (hx : x.natAbs < β ^ n) :
     let i := (n + 2) / 3
     let β' : Int := (β : Int) ^ i
-    0 ≤ a % β' ∧ a % β' < β' ∧ 0 ≤ a / β' % β' ∧ a / β' % β' < β' ∧
-      -β' ≤ a / β' / β' ∧ a / β' / β' < β' ∧ 8 * β' ≤ ((β ^ (i + 3) : Nat) : Int) := by
+    0 ≤ x % β' ∧ x % β' < β' ∧ 0 ≤ x / β' % β' ∧ x / β' % β' < β' ∧
+      -β' ≤ x / β' / β' ∧ x / β' / β' < β' ∧ 8 * β' ≤ ((β ^ (i + 3) : Nat) : Int) := by
   intro i β'
-  have hx : 0 < β' := Int.pow_pos (by omega)
-  have hxx : 0 < β' * β' := Int.mul_pos hx hx
+  have hpos : 0 < β' := Int.pow_pos (by omega)
+  have hpos2 : 0 < β' * β' := Int.mul_pos hpos hpos
   have h3 : ((β ^ n : Nat) : Int) ≤ β' * β' * β' := by
     rw [show β' * β' * β' = (β : Int) ^ (3 * i) by
           rw [show 3 * i = i + i + i by omega, Int.pow_add, Int.pow_add],
@@ -62,60 +62,60 @@ theorem limb_bounds (β : Nat) (hβ : 2 ≤ β) (a : Int) (n : Nat) (ha : a.natA
     calc 8 * β' = β' * 8 := Int.mul_comm _ _
       _ ≤ β' * (β * β * β) := Int.mul_le_mul_of_nonneg_left h8 (by omega)
       _ = β' * β * β * β := by ac_rfl
-  have ha' : a < β' * β' * β' ∧ -(β' * β' * β') < a := by omega
+  have hx' : x < β' * β' * β' ∧ -(β' * β' * β') < x := by omega
   rw [Int.ediv_ediv_of_nonneg (by omega)]
-  refine ⟨Int.emod_nonneg _ (by omega), Int.emod_lt_of_pos _ hx,
-    Int.emod_nonneg _ (by omega), Int.emod_lt_of_pos _ hx, ?_, ?_, h8⟩
-  · rw [Int.le_ediv_iff_mul_le hxx]
+  refine ⟨Int.emod_nonneg _ (by omega), Int.emod_lt_of_pos _ hpos,
+    Int.emod_nonneg _ (by omega), Int.emod_lt_of_pos _ hpos, ?_, ?_, h8⟩
+  · rw [Int.le_ediv_iff_mul_le hpos2]
     have : -β' * (β' * β') = -(β' * β' * β') := by rw [Int.neg_mul, Int.mul_assoc]
     omega
-  · rw [Int.ediv_lt_iff_lt_mul hxx]
+  · rw [Int.ediv_lt_iff_lt_mul hpos2]
     have : β' * (β' * β') = β' * β' * β' := by rw [Int.mul_assoc]
     omega
 
-theorem nDigits_lt_of_bounds (β : Nat) (hβ : 2 ≤ β) (a b : Int) (j n : Nat)
-    (ha : a.natAbs < β ^ j) (hb : b.natAbs < β ^ j) (hj : j < n) :
-    nDigits β hβ (max a.natAbs b.natAbs) < n := by
-  have := nDigits_le_of_lt_pow β hβ (max a.natAbs b.natAbs) j (by omega)
+theorem nDigits_lt_of_bounds (β : Nat) (hβ : 2 ≤ β) (x y : Int) (j n : Nat)
+    (hx : x.natAbs < β ^ j) (hy : y.natAbs < β ^ j) (hj : j < n) :
+    nDigits β hβ (max x.natAbs y.natAbs) < n := by
+  have := nDigits_le_of_lt_pow β hβ (max x.natAbs y.natAbs) j (by omega)
   omega
 
-theorem calls_lt (β : Nat) (hβ : 2 ≤ β) (a b : Int) (n i : Nat) (β' : Int)
-    (hn : 6 ≤ n) (hM : max a.natAbs b.natAbs < β ^ n)
-    (hi : i = (n + 2) / 3) (hx : β' = (β : Int) ^ i) :
-    nDigits β hβ (max (a % β').natAbs (b % β').natAbs) < n ∧
-    nDigits β hβ (max (a % β' + a / β' / β' + a / β' % β').natAbs
-      (b % β' + b / β' / β' + b / β' % β').natAbs) < n ∧
-    nDigits β hβ (max (a % β' + a / β' / β' - a / β' % β').natAbs
-      (b % β' + b / β' / β' - b / β' % β').natAbs) < n ∧
-    nDigits β hβ (max (a % β' + 2 * (a / β' % β') + 4 * (a / β' / β')).natAbs
-      (b % β' + 2 * (b / β' % β') + 4 * (b / β' / β')).natAbs) < n ∧
-    nDigits β hβ (max (a / β' / β').natAbs (b / β' / β').natAbs) < n := by
-  subst hi hx
-  obtain ⟨ha0, ha0', ha1, ha1', ha2, ha2', h8⟩ := limb_bounds β hβ a n (by omega)
-  obtain ⟨hb0, hb0', hb1, hb1', hb2, hb2', -⟩ := limb_bounds β hβ b n (by omega)
-  have hx : 0 < (β : Int) ^ ((n + 2) / 3) := Int.pow_pos (by omega)
+theorem calls_lt (β : Nat) (hβ : 2 ≤ β) (x y : Int) (n i : Nat) (β' : Int)
+    (hn : 6 ≤ n) (hM : max x.natAbs y.natAbs < β ^ n)
+    (hi : i = (n + 2) / 3) (hpos : β' = (β : Int) ^ i) :
+    nDigits β hβ (max (x % β').natAbs (y % β').natAbs) < n ∧
+    nDigits β hβ (max (x % β' + x / β' / β' + x / β' % β').natAbs
+      (y % β' + y / β' / β' + y / β' % β').natAbs) < n ∧
+    nDigits β hβ (max (x % β' + x / β' / β' - x / β' % β').natAbs
+      (y % β' + y / β' / β' - y / β' % β').natAbs) < n ∧
+    nDigits β hβ (max (x % β' + 2 * (x / β' % β') + 4 * (x / β' / β')).natAbs
+      (y % β' + 2 * (y / β' % β') + 4 * (y / β' / β')).natAbs) < n ∧
+    nDigits β hβ (max (x / β' / β').natAbs (y / β' / β').natAbs) < n := by
+  subst hi hpos
+  obtain ⟨hx0, hx0', hx1, hx1', hx2, hx2', h8⟩ := limb_bounds β hβ x n (by omega)
+  obtain ⟨hy0, hy0', hy1, hy1', hy2, hy2', -⟩ := limb_bounds β hβ y n (by omega)
+  have hpos : 0 < (β : Int) ^ ((n + 2) / 3) := Int.pow_pos (by omega)
   refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;>
     exact nDigits_lt_of_bounds β hβ _ _ ((n + 2) / 3 + 3) n (by omega) (by omega) (by omega)
 
-def toom3 (β : Nat) (hβ : 2 ≤ β) (a b : Int) : Int :=
-  let n := nDigits β hβ (max a.natAbs b.natAbs)
-  if n < 6 then a * b
+def toom3 (β : Nat) (hβ : 2 ≤ β) (x y : Int) : Int :=
+  let n := nDigits β hβ (max x.natAbs y.natAbs)
+  if n < 6 then x * y
   else
     let i := (n + 2) / 3
     let β' : Int := (β : Int) ^ i
-    let a0 := a % β'
-    let a1 := a / β' % β'
-    let a2 := a / β' / β'
-    let b0 := b % β'
-    let b1 := b / β' % β'
-    let b2 := b / β' / β'
-    let a02 := a0 + a2
-    let b02 := b0 + b2
-    let v0 := toom3 β hβ a0 b0
-    let v1 := toom3 β hβ (a02 + a1) (b02 + b1)
-    let vm1 := toom3 β hβ (a02 - a1) (b02 - b1)
-    let v2 := toom3 β hβ (a0 + 2 * a1 + 4 * a2) (b0 + 2 * b1 + 4 * b2)
-    let vinf := toom3 β hβ a2 b2
+    let x0 := x % β'
+    let x1 := x / β' % β'
+    let x2 := x / β' / β'
+    let y0 := y % β'
+    let y1 := y / β' % β'
+    let y2 := y / β' / β'
+    let x02 := x0 + x2
+    let y02 := y0 + y2
+    let v0 := toom3 β hβ x0 y0
+    let v1 := toom3 β hβ (x02 + x1) (y02 + y1)
+    let vm1 := toom3 β hβ (x02 - x1) (y02 - y1)
+    let v2 := toom3 β hβ (x0 + 2 * x1 + 4 * x2) (y0 + 2 * y1 + 4 * y2)
+    let vinf := toom3 β hβ x2 y2
     let t1 := (3 * v0 + 2 * vm1 + v2) / 6 - 2 * vinf
     let t2 := (v1 + vm1) / 2
     let c0 := v0
@@ -124,9 +124,9 @@ def toom3 (β : Nat) (hβ : 2 ≤ β) (a b : Int) : Int :=
     let c3 := t1 - t2
     let c4 := vinf
     c0 + c1 * β' + c2 * β' ^ 2 + c3 * β' ^ 3 + c4 * β' ^ 4
-termination_by nDigits β hβ (max a.natAbs b.natAbs)
+termination_by nDigits β hβ (max x.natAbs y.natAbs)
 decreasing_by
-  all_goals (have hc := calls_lt β hβ a b n i β' (by omega) (lt_pow_nDigits β hβ _) rfl rfl)
+  all_goals (have hc := calls_lt β hβ x y n i β' (by omega) (lt_pow_nDigits β hβ _) rfl rfl)
   · exact hc.1
   · exact hc.2.1
   · exact hc.2.2.1
@@ -139,57 +139,57 @@ decreasing_by
 #eval toom3 10 (by decide) 1000003 999983
 #eval 1000003 * 999983
 
-theorem split3 (a x : Int) : a = a % x + (a / x % x) * x + (a / x / x) * x ^ 2 := by
-  have h1 := Int.emod_add_mul_ediv a x
-  have h2 := Int.emod_add_mul_ediv (a / x) x
+theorem split3 (x β' : Int) : x = x % β' + (x / β' % β') * β' + (x / β' / β') * β' ^ 2 := by
+  have h1 := Int.emod_add_mul_ediv x β'
+  have h2 := Int.emod_add_mul_ediv (x / β') β'
   grind
 
-theorem interp_div6 (a0 a1 a2 b0 b1 b2 : Int) :
-    3 * (a0 * b0) + 2 * ((a0 + a2 - a1) * (b0 + b2 - b1))
-      + (a0 + 2 * a1 + 4 * a2) * (b0 + 2 * b1 + 4 * b2)
-      = 6 * (a0 * b0 + (a0 * b2 + a1 * b1 + a2 * b0) + (a1 * b2 + a2 * b1) + 3 * (a2 * b2)) := by
+theorem interp_div6 (x0 x1 x2 y0 y1 y2 : Int) :
+    3 * (x0 * y0) + 2 * ((x0 + x2 - x1) * (y0 + y2 - y1))
+      + (x0 + 2 * x1 + 4 * x2) * (y0 + 2 * y1 + 4 * y2)
+      = 6 * (x0 * y0 + (x0 * y2 + x1 * y1 + x2 * y0) + (x1 * y2 + x2 * y1) + 3 * (x2 * y2)) := by
   grind
 
-theorem interp_div2 (a0 a1 a2 b0 b1 b2 : Int) :
-    (a0 + a2 + a1) * (b0 + b2 + b1) + (a0 + a2 - a1) * (b0 + b2 - b1)
-      = 2 * (a0 * b0 + (a0 * b2 + a1 * b1 + a2 * b0) + a2 * b2) := by
+theorem interp_div2 (x0 x1 x2 y0 y1 y2 : Int) :
+    (x0 + x2 + x1) * (y0 + y2 + y1) + (x0 + x2 - x1) * (y0 + y2 - y1)
+      = 2 * (x0 * y0 + (x0 * y2 + x1 * y1 + x2 * y0) + x2 * y2) := by
   grind
 
-theorem recombine (a0 a1 a2 b0 b1 b2 x : Int) :
-    let c0 := a0 * b0
-    let c2 := a0 * b2 + a1 * b1 + a2 * b0
-    let c3 := a1 * b2 + a2 * b1
-    let c4 := a2 * b2
-    let v1 := (a0 + a2 + a1) * (b0 + b2 + b1)
+theorem recombine (x0 x1 x2 y0 y1 y2 β' : Int) :
+    let c0 := x0 * y0
+    let c2 := x0 * y2 + x1 * y1 + x2 * y0
+    let c3 := x1 * y2 + x2 * y1
+    let c4 := x2 * y2
+    let v1 := (x0 + x2 + x1) * (y0 + y2 + y1)
     let t1 := c0 + c2 + c3 + 3 * c4 - 2 * c4
     let t2 := c0 + c2 + c4
-    c0 + (v1 - t1) * x + (t2 - c0 - c4) * x ^ 2 + (t1 - t2) * x ^ 3 + c4 * x ^ 4
-      = (a0 + a1 * x + a2 * x ^ 2) * (b0 + b1 * x + b2 * x ^ 2) := by
+    c0 + (v1 - t1) * β' + (t2 - c0 - c4) * β' ^ 2 + (t1 - t2) * β' ^ 3 + c4 * β' ^ 4
+      = (x0 + x1 * β' + x2 * β' ^ 2) * (y0 + y1 * β' + y2 * β' ^ 2) := by
   intro c0 c2 c3 c4 v1 t1 t2
   grind
 
-theorem toom3_step (a b x a0 a1 a2 b0 b1 b2 v0 v1 vm1 v2 vinf : Int)
-    (ha : a = a0 + a1 * x + a2 * x ^ 2) (hb : b = b0 + b1 * x + b2 * x ^ 2)
-    (h0 : v0 = a0 * b0)
-    (h1 : v1 = (a0 + a2 + a1) * (b0 + b2 + b1))
-    (hm1 : vm1 = (a0 + a2 - a1) * (b0 + b2 - b1))
-    (h2 : v2 = (a0 + 2 * a1 + 4 * a2) * (b0 + 2 * b1 + 4 * b2))
-    (hinf : vinf = a2 * b2) :
+theorem toom3_step (x y β' x0 x1 x2 y0 y1 y2 v0 v1 vm1 v2 vinf : Int)
+    (hx : x = x0 + x1 * β' + x2 * β' ^ 2) (hy : y = y0 + y1 * β' + y2 * β' ^ 2)
+    (h0 : v0 = x0 * y0)
+    (h1 : v1 = (x0 + x2 + x1) * (y0 + y2 + y1))
+    (hm1 : vm1 = (x0 + x2 - x1) * (y0 + y2 - y1))
+    (h2 : v2 = (x0 + 2 * x1 + 4 * x2) * (y0 + 2 * y1 + 4 * y2))
+    (hinf : vinf = x2 * y2) :
     let t1 := (3 * v0 + 2 * vm1 + v2) / 6 - 2 * vinf
     let t2 := (v1 + vm1) / 2
-    v0 + (v1 - t1) * x + (t2 - v0 - vinf) * x ^ 2 + (t1 - t2) * x ^ 3 + vinf * x ^ 4 = a * b := by
+    v0 + (v1 - t1) * β' + (t2 - v0 - vinf) * β' ^ 2 + (t1 - t2) * β' ^ 3 + vinf * β' ^ 4 = x * y := by
   intro t1 t2
   subst h0 h1 hm1 h2 hinf
   simp only [t1, t2]
   rw [interp_div6, interp_div2, Int.mul_ediv_cancel_left _ (by decide),
-    Int.mul_ediv_cancel_left _ (by decide), recombine, ← ha, ← hb]
+    Int.mul_ediv_cancel_left _ (by decide), recombine, ← hx, ← hy]
 
-theorem toom3_correct (β : Nat) (hβ : 2 ≤ β) (a b : Int) : toom3 β hβ a b = a * b := by
-  induction a, b using toom3.induct β hβ with
-  | case1 a b n h =>
+theorem toom3_correct (β : Nat) (hβ : 2 ≤ β) (x y : Int) : toom3 β hβ x y = x * y := by
+  induction x, y using toom3.induct β hβ with
+  | case1 x y n h =>
     rw [toom3]
     exact ite_eq_left h
-  | case2 a b n h i β' a0 a1 a2 b0 b1 b2 a02 b02 ih0 ih1 ihm1 ih2 ihinf =>
+  | case2 x y n h i β' x0 x1 x2 y0 y1 y2 x02 y02 ih0 ih1 ihm1 ih2 ihinf =>
     rw [toom3]
-    exact (ite_eq_right h).trans (toom3_step a b β' a0 a1 a2 b0 b1 b2 _ _ _ _ _
-      (split3 a β') (split3 b β') ih0 ih1 ihm1 ih2 ihinf)
+    exact (ite_eq_right h).trans (toom3_step x y β' x0 x1 x2 y0 y1 y2 _ _ _ _ _
+      (split3 x β') (split3 y β') ih0 ih1 ihm1 ih2 ihinf)
