@@ -1,3 +1,5 @@
+-- Co-authored by: Fable 5.1
+
 def nDigits (β : Nat) (hβ : 2 ≤ β) (m : Nat) : Nat :=
   if m = 0 then 0 else nDigits β hβ (m / β) + 1
 termination_by m
