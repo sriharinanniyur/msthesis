@@ -429,8 +429,12 @@ lemma decrease_property
   (i : Fin (KX+KY - 1))
   (h_THETA : (tk_P BASE x y) > (tk_THETA BASE KX KY POINTS))
 : tk_P BASE
-    |(eval_vec_as_poly (tk_split KX KY KX BASE x.natAbs y.natAbs x.natAbs) (POINTS.get i))|
-    |(eval_vec_as_poly (tk_split KX KY KY BASE x.natAbs y.natAbs y.natAbs) (POINTS.get i))|
+    |(eval_vec_as_poly
+      (tk_split KX KY KX BASE x.natAbs y.natAbs x.natAbs)
+      (POINTS.get i))|
+    |(eval_vec_as_poly
+      (tk_split KX KY KY BASE x.natAbs y.natAbs y.natAbs)
+      (POINTS.get i))|
   < tk_P BASE x y := by
   have hPnat : tk_P BASE (x.natAbs : ℤ) (y.natAbs : ℤ) = tk_P BASE x y := by
     simp [tk_P]
@@ -658,7 +662,12 @@ noncomputable def toomk
       fun i =>
         let a := p_vec i
         let b := q_vec i
-        let absprod := toomk BASE KX KY h_base h_k (a.natAbs : ℤ) (b.natAbs : ℤ) POINTS h_inj
+        let absprod := toomk
+          BASE
+          KX KY
+          h_base h_k
+          (a.natAbs : ℤ) (b.natAbs : ℤ)
+          POINTS h_inj
         if (Xor (a < 0) (b < 0)) then -absprod else absprod
 
     let POINTS_Q := fun i => (POINTS.get i : ℚ)
@@ -669,7 +678,9 @@ noncomputable def toomk
 termination_by
   tk_P BASE x y
 decreasing_by
-  simpa [p_vec, q_vec] using (decrease_property KX KY BASE h_base h_k x y POINTS i (lt_of_not_ge h))
+  simpa [p_vec, q_vec] using
+    (decrease_property
+      KX KY BASE h_base h_k x y POINTS i (lt_of_not_ge h))
 
 -----------------------------------------------------------
 -- CORRECTNESS ARGUMENT

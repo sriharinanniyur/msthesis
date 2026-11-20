@@ -81,7 +81,12 @@ def OuterInv (x : Nat) (i : Nat) (w : Array Nat) : Prop :=
   w.toList.drop (m + i) = L₀.drop (m + i) ∧
   ofDigits β (w.toList.take (m + i)) = x * ofDigits β ((L₀.drop m).take i)
 
-def InnerInv (X : List Nat) (A : Array Nat) (yi i : Nat) (j : Nat) (s : Array Nat × Nat) : Prop :=
+def InnerInv
+    (X : List Nat)
+    (A : Array Nat)
+    (yi i : Nat)
+    (j : Nat)
+    (s : Array Nat × Nat) : Prop :=
   s.1.toList.length = L₀.length ∧
   (∀ d ∈ s.1.toList, d < β) ∧
   s.2 < β ∧

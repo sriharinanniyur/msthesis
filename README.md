@@ -1,9 +1,14 @@
 # MS Thesis
 
-Formal verification of integer multiplication algorithms in Lean 4.
+Formalization of integer multiplication algorithms in Lean 4.
 
-## Notes
-The formalizations are of abstract mathematical specifications of each algorithm, not of particular implementations. See the thesis itself for our philosophy and approach to specifying these algorithms. As a rule, we prioritize generality.
+## Contents
+See the thesis itself for our philosophy and approach to specifying these algorithms. We tend to prioritize formalizing abstract mathematical specifications of each algorithm.
+- Packed long multiplication (`ks_improved`): on digit arrays with base generalized.
+- Karatsuba: abstract and concrete specifications.
+- Toom-Cook: general case, pure mathematical version.
+- Toom-3: concrete interpolation sequence.
+- Sch\"{o}nhage-Strassen I and II (SSC and SSF): pure mathematical specifications.
 
 ## Building
 

@@ -21,21 +21,22 @@ noncomputable def fft (K : ℕ) (ω : ℂ) (v : Vector ℂ K) : Vector ℂ K :=
       v_hat := v_hat.set (j.val + half) (p - q) (by omega)
     return v_hat
 
-def decompose (l K a : ℕ) : Vector ℂ K :=
-  Vector.ofFn fun j => (a / 2 ^ (j.val * l) % 2 ^ l : ℕ)
+def decompose (l K x : ℕ) : Vector ℂ K :=
+  Vector.ofFn fun j => (x / 2 ^ (j.val * l) % 2 ^ l : ℕ)
 
-noncomputable def ssc (a b : ℤ) : ℤ :=
-  let n := max a.natAbs.size b.natAbs.size
+noncomputable def ssc (x y : ℤ) : ℤ :=
+  let n := max x.natAbs.size y.natAbs.size
   let l := max (Nat.clog 2 n) 1
   let k := Nat.clog 2 ((2 * n + l - 1) / l)
   let K : ℕ := 2 ^ k
   let ω : ℂ := Complex.exp (2 * Real.pi * Complex.I / K)
-  let A := decompose l K a.natAbs
-  let B := decompose l K b.natAbs
-  let A_hat := fft K ω⁻¹ A
-  let B_hat := fft K ω⁻¹ B
-  let C := fft K ω (Vector.ofFn fun j => A_hat[j] * B_hat[j])
-  a.sign * b.sign * ((∑ j : Fin K, (round (C[j].re / K)).toNat * 2 ^ (j.val * l) : ℕ) : ℤ)
+  let X := decompose l K x.natAbs
+  let Y := decompose l K y.natAbs
+  let X_hat := fft K ω⁻¹ X
+  let Y_hat := fft K ω⁻¹ Y
+  let C := fft K ω (Vector.ofFn fun j => X_hat[j] * Y_hat[j])
+  x.sign * y.sign *
+    ((∑ j : Fin K, (round (C[j].re / K)).toNat * 2 ^ (j.val * l) : ℕ) : ℤ)
 
 theorem sum_range_two_mul {S : Type*} [AddCommMonoid S] {K m : ℕ} (hK : K = 2 * m) (f : ℕ → S) :
     ∑ j ∈ range K, f j = ∑ j ∈ range m, f (2 * j) + ∑ j ∈ range m, f (2 * j + 1) := by
@@ -259,10 +260,10 @@ theorem fft_eq :
         ring
 
 theorem fft_mul_fft_inv (k K : ℕ) (ω : ℂ) (hK : K = 2^k) (hωK : ω^K = 1)
-    (hω : k = 0 ∨ ω^(2^(k - 1)) = -1) (va vb : Vector ℂ K) (m : ℕ) (hm : m < K) :
-    (fft K ω (Vector.ofFn fun i => (fft K ω⁻¹ va)[i] * (fft K ω⁻¹ vb)[i]))[m]
+    (hω : k = 0 ∨ ω^(2^(k - 1)) = -1) (vx vy : Vector ℂ K) (m : ℕ) (hm : m < K) :
+    (fft K ω (Vector.ofFn fun i => (fft K ω⁻¹ vx)[i] * (fft K ω⁻¹ vy)[i]))[m]
       = (K : ℂ) * ∑ j ∈ range K, ∑ l ∈ range K,
-          if (j + l) % K = m then vfun va j * vfun vb l else 0 := by
+          if (j + l) % K = m then vfun vx j * vfun vy l else 0 := by
   have hζ : k = 0 ∨ (ω⁻¹)^(2^(k - 1)) = -1 := by
     rcases hω with h | h
     · exact Or.inl h
@@ -271,15 +272,15 @@ theorem fft_mul_fft_inv (k K : ℕ) (ω : ℂ) (hK : K = 2^k) (hωK : ω^K = 1)
     rw [inv_pow]
     apply eq_inv_of_mul_eq_one_left
     rw [← pow_add, Nat.add_sub_cancel' hm.le, hωK]
-  have hfa : ∀ i (hi : i < K), (fft K ω⁻¹ va)[i] = ∑ j ∈ range K, (ω⁻¹)^(i * j) * vfun va j :=
-    fun i hi => fft_eq k K ω⁻¹ hK va i hi hζ
-  have hfb : ∀ i (hi : i < K), (fft K ω⁻¹ vb)[i] = ∑ l ∈ range K, (ω⁻¹)^(i * l) * vfun vb l :=
-    fun i hi => fft_eq k K ω⁻¹ hK vb i hi hζ
+  have hfx : ∀ i (hi : i < K), (fft K ω⁻¹ vx)[i] = ∑ j ∈ range K, (ω⁻¹)^(i * j) * vfun vx j :=
+    fun i hi => fft_eq k K ω⁻¹ hK vx i hi hζ
+  have hfy : ∀ i (hi : i < K), (fft K ω⁻¹ vy)[i] = ∑ l ∈ range K, (ω⁻¹)^(i * l) * vfun vy l :=
+    fun i hi => fft_eq k K ω⁻¹ hK vy i hi hζ
   rw [fft_eq k K ω hK _ m hm hω]
   rw [sum_congr rfl (fun i hi => by
     rw [vfun_ofFn _ _ (mem_range.mp hi)]
     simp only [Fin.getElem_fin]
-    rw [hfa i (mem_range.mp hi), hfb i (mem_range.mp hi), pow_mul, hωm, ← pow_mul])]
+    rw [hfx i (mem_range.mp hi), hfy i (mem_range.mp hi), pow_mul, hωm, ← pow_mul])]
   subst hK
   generalize ω⁻¹ = ζ at hζ ⊢
   simp_rw [sum_mul_sum, mul_sum]
@@ -287,23 +288,23 @@ theorem fft_mul_fft_inv (k K : ℕ) (ω : ℂ) (hK : K = 2^k) (hωK : ω^K = 1)
   refine sum_congr rfl fun j _ => ?_
   rw [sum_comm]
   refine sum_congr rfl fun l _ => ?_
-  calc ∑ i ∈ range (2^k), ζ^((2^k - m) * i) * (ζ^(i * j) * vfun va j * (ζ^(i * l) * vfun vb l))
-      = ∑ i ∈ range (2^k), (vfun va j * vfun vb l) * ζ^(i * (2^k - m + j + l)) := by
+  calc ∑ i ∈ range (2^k), ζ^((2^k - m) * i) * (ζ^(i * j) * vfun vx j * (ζ^(i * l) * vfun vy l))
+      = ∑ i ∈ range (2^k), (vfun vx j * vfun vy l) * ζ^(i * (2^k - m + j + l)) := by
         refine sum_congr rfl fun i _ => ?_
         ring
-    _ = (vfun va j * vfun vb l) * ∑ i ∈ range (2^k), ζ^(i * (2^k - m + j + l)) := by
+    _ = (vfun vx j * vfun vy l) * ∑ i ∈ range (2^k), ζ^(i * (2^k - m + j + l)) := by
         rw [mul_sum]
-    _ = (2^k : ℕ) * if (j + l) % 2^k = m then vfun va j * vfun vb l else 0 := by
+    _ = (2^k : ℕ) * if (j + l) % 2^k = m then vfun vx j * vfun vy l else 0 := by
         rw [sum_pow_mul_eq k ζ hζ]
         simp only [dvd_iff_add_mod_eq (2^k) m j l hm]
         split_ifs
         · ring
         · simp
 
-theorem recompose_linear (K l : ℕ) (x y : ℕ → ℕ) (h0 : ∀ j j', K ≤ j + j' → x j * y j' = 0) :
+theorem recompose_linear (K l : ℕ) (dx dy : ℕ → ℕ) (h0 : ∀ j j', K ≤ j + j' → dx j * dy j' = 0) :
     ∑ m ∈ range K,
-        (∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then x j * y j' else 0) * 2^(m * l)
-      = (∑ j ∈ range K, x j * 2^(j * l)) * (∑ j' ∈ range K, y j' * 2^(j' * l)) := by
+        (∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then dx j * dy j' else 0) * 2^(m * l)
+      = (∑ j ∈ range K, dx j * 2^(j * l)) * (∑ j' ∈ range K, dy j' * 2^(j' * l)) := by
   rw [sum_mul_sum]
   simp_rw [sum_mul]
   rw [sum_comm]
@@ -317,10 +318,10 @@ theorem recompose_linear (K l : ℕ) (x y : ℕ → ℕ) (h0 : ∀ j j', K ≤ j
   · rw [mul_mul_mul_comm, h0 j j' (by have := mem_range.mp hj; have := mem_range.mp hj'; simp at h; omega),
       zero_mul]
 
-theorem ssc_eq (a b : ℤ) : ssc a b = a * b := by
+theorem ssc_eq (x y : ℤ) : ssc x y = x * y := by
   unfold ssc
   lift_lets
-  extract_lets n l k K ω A B A_hat B_hat C
+  extract_lets n l k K ω X Y X_hat Y_hat C
   have hl : 1 ≤ l := le_max_right _ _
   have hK : K = 2^k := rfl
   have hK0 : 0 < K := by positivity
@@ -333,9 +334,9 @@ theorem ssc_eq (a b : ℤ) : ssc a b = a * b := by
     calc 2 * n ≤ l * ((2 * n + l - 1) / l) := h2n
       _ ≤ l * K := Nat.mul_le_mul_left _ hq
       _ = K * l := mul_comm _ _
-  have ha : a.natAbs < 2^n :=
+  have hx : x.natAbs < 2^n :=
     lt_of_lt_of_le (Nat.lt_size_self _) (Nat.pow_le_pow_right (by norm_num) (le_max_left _ _))
-  have hb : b.natAbs < 2^n :=
+  have hy : y.natAbs < 2^n :=
     lt_of_lt_of_le (Nat.lt_size_self _) (Nat.pow_le_pow_right (by norm_num) (le_max_right _ _))
   have hωK : ω^K = 1 := by
     simp only [ω]
@@ -353,69 +354,69 @@ theorem ssc_eq (a b : ℤ) : ssc a b = a * b := by
         rw [show (2 : ℂ)^k = 2^(k - 1) * 2 by rw [← pow_succ, Nat.sub_add_cancel hk]]
         field_simp
       rw [this, Complex.exp_pi_mul_I]
-  obtain ⟨x, hx⟩ : ∃ x : ℕ → ℕ, x = fun j => a.natAbs / 2^(j * l) % 2^l := ⟨_, rfl⟩
-  obtain ⟨y, hy⟩ : ∃ y : ℕ → ℕ, y = fun j => b.natAbs / 2^(j * l) % 2^l := ⟨_, rfl⟩
-  have hzero : ∀ j j', K ≤ j + j' → x j * y j' = 0 := by
+  obtain ⟨dx, hdx⟩ : ∃ dx : ℕ → ℕ, dx = fun j => x.natAbs / 2^(j * l) % 2^l := ⟨_, rfl⟩
+  obtain ⟨dy, hdy⟩ : ∃ dy : ℕ → ℕ, dy = fun j => y.natAbs / 2^(j * l) % 2^l := ⟨_, rfl⟩
+  have hzero : ∀ j j', K ≤ j + j' → dx j * dy j' = 0 := by
     intro j j' hjj'
     have hKjj : K * l ≤ (j + j') * l := Nat.mul_le_mul_right l hjj'
     rw [add_mul] at hKjj
     rcases le_or_gt n (j * l) with h | h
-    · have : a.natAbs / 2^(j * l) = 0 :=
-        Nat.div_eq_of_lt (lt_of_lt_of_le ha (Nat.pow_le_pow_right (by norm_num) h))
-      simp [hx, this]
+    · have : x.natAbs / 2^(j * l) = 0 :=
+        Nat.div_eq_of_lt (lt_of_lt_of_le hx (Nat.pow_le_pow_right (by norm_num) h))
+      simp [hdx, this]
     rcases le_or_gt n (j' * l) with h' | h'
-    · have : b.natAbs / 2^(j' * l) = 0 :=
-        Nat.div_eq_of_lt (lt_of_lt_of_le hb (Nat.pow_le_pow_right (by norm_num) h'))
-      simp [hy, this]
+    · have : y.natAbs / 2^(j' * l) = 0 :=
+        Nat.div_eq_of_lt (lt_of_lt_of_le hy (Nat.pow_le_pow_right (by norm_num) h'))
+      simp [hdy, this]
     omega
-  have hvA : ∀ j (hj : j < K), vfun A j = (x j : ℂ) := by
+  have hvX : ∀ j (hj : j < K), vfun X j = (dx j : ℂ) := by
     intro j hj
-    simp only [A, decompose, vfun_ofFn _ _ hj, hx]
-  have hvB : ∀ j (hj : j < K), vfun B j = (y j : ℂ) := by
+    simp only [X, decompose, vfun_ofFn _ _ hj, hdx]
+  have hvY : ∀ j (hj : j < K), vfun Y j = (dy j : ℂ) := by
     intro j hj
-    simp only [B, decompose, vfun_ofFn _ _ hj, hy]
+    simp only [Y, decompose, vfun_ofFn _ _ hj, hdy]
   have hC : ∀ m (hm : m < K), C[m]
       = (K : ℂ)
-        * ((∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then x j * y j' else 0 : ℕ) : ℂ) := by
+        * ((∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then dx j * dy j' else 0 : ℕ) : ℂ) := by
     intro m hm
-    simp only [C, A_hat, B_hat]
-    rw [fft_mul_fft_inv k K ω hK hωK hω A B m hm]
+    simp only [C, X_hat, Y_hat]
+    rw [fft_mul_fft_inv k K ω hK hωK hω X Y m hm]
     push_cast
     congr 1
     refine sum_congr rfl fun j hj => sum_congr rfl fun j' hj' => ?_
-    rw [hvA j (mem_range.mp hj), hvB j' (mem_range.mp hj')]
+    rw [hvX j (mem_range.mp hj), hvY j' (mem_range.mp hj')]
     by_cases hlt : j + j' < K
     · rw [Nat.mod_eq_of_lt hlt]
-    · have h0 : ((x j : ℂ)) * (y j' : ℂ) = 0 := by exact_mod_cast hzero j j' (by omega)
+    · have h0 : ((dx j : ℂ)) * (dy j' : ℂ) = 0 := by exact_mod_cast hzero j j' (by omega)
       rw [h0]
       simp
   have hround : ∀ m (hm : m < K), (round (C[m].re / (K : ℝ))).toNat
-      = ∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then x j * y j' else 0 := by
+      = ∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then dx j * dy j' else 0 := by
     intro m hm
     rw [hC m hm]
     have : (K : ℂ)
-          * ((∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then x j * y j' else 0 : ℕ) : ℂ)
-        = ((K * ∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then x j * y j' else 0 : ℕ)
+          * ((∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then dx j * dy j' else 0 : ℕ) : ℂ)
+        = ((K * ∑ j ∈ range K, ∑ j' ∈ range K, if j + j' = m then dx j * dy j' else 0 : ℕ)
             : ℂ) := by
       push_cast; ring
     rw [this, Complex.natCast_re, Nat.cast_mul,
       mul_div_cancel_left₀ _ (by exact_mod_cast hK0.ne' : (K : ℝ) ≠ 0), round_natCast,
       Int.toNat_natCast]
   have hsum : (∑ j : Fin K, (round (C[j].re / (K : ℝ))).toNat * 2^(j.val * l))
-      = a.natAbs * b.natAbs := by
+      = x.natAbs * y.natAbs := by
     rw [Finset.sum_fin_eq_sum_range]
     have hs : ∀ j ∈ range K,
         (if h : j < K then (round (C[(⟨j, h⟩ : Fin K)].re / (K : ℝ))).toNat
             * 2^((⟨j, h⟩ : Fin K).val * l) else 0)
-        = (∑ i ∈ range K, ∑ i' ∈ range K, if i + i' = j then x i * y i' else 0) * 2^(j * l) := by
+        = (∑ i ∈ range K, ∑ i' ∈ range K, if i + i' = j then dx i * dy i' else 0) * 2^(j * l) := by
       intro j hj
       rw [dite_eq_left (mem_range.mp hj)]
       simp only [Fin.getElem_fin]
       rw [hround j (mem_range.mp hj)]
-    rw [sum_congr rfl hs, recompose_linear K l x y hzero, hx, hy]
+    rw [sum_congr rfl hs, recompose_linear K l dx dy hzero, hdx, hdy]
     have hKl' : ∀ z : ℕ, z < 2^n → z < 2^(K * l) :=
       fun z hz => lt_of_lt_of_le hz (Nat.pow_le_pow_right (by norm_num) (by omega))
-    rw [← digits_eq a.natAbs K l (hKl' _ ha), ← digits_eq b.natAbs K l (hKl' _ hb)]
+    rw [← digits_eq x.natAbs K l (hKl' _ hx), ← digits_eq y.natAbs K l (hKl' _ hy)]
   rw [hsum]
   push_cast
   rw [mul_mul_mul_comm, Int.sign_mul_abs, Int.sign_mul_abs]
