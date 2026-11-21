@@ -70,27 +70,38 @@ structure Params (n : ℕ) where
   hKM : n = 2^k * M
   hn' : SuitableN' n k M n'
 
-def ssf (sel : ∀ n, good_n n → Params n) (n : ℕ) (hn : good_n n) (a b : ZMod (2^n + 1)) :
-    ZMod (2^n + 1) :=
+def ssf
+    (sel : ∀ n, good_n n → Params n)
+    (n : ℕ)
+    (hn : good_n n)
+    (a b : ZMod (2^n + 1)) : ZMod (2^n + 1) :=
   if a.val = 2^n then -b else
   if b.val = 2^n then -a else
   if h16 : n ≤ 16 then a * b else
     let ⟨k, M, n', hKM, hn'⟩ := sel n hn
     let K := 2^k
-    let A : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => ((a.val / 2^(j.val * M)) % 2^M : ℕ)
-    let B : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => ((b.val / 2^(j.val * M)) % 2^M : ℕ)
+    let A : Vector (ZMod (2^n' + 1)) K :=
+      Vector.ofFn fun j => ((a.val / 2^(j.val * M)) % 2^M : ℕ)
+    let B : Vector (ZMod (2^n' + 1)) K :=
+      Vector.ofFn fun j => ((b.val / 2^(j.val * M)) % 2^M : ℕ)
     let ψ : ZMod (2^n' + 1) := 2^(n' / K)
     let ω := ψ^2
-    let A' : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => ψ^j.val * A[j]
-    let B' : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => ψ^j.val * B[j]
+    let A' : Vector (ZMod (2^n' + 1)) K :=
+      Vector.ofFn fun j => ψ^j.val * A[j]
+    let B' : Vector (ZMod (2^n' + 1)) K :=
+      Vector.ofFn fun j => ψ^j.val * B[j]
     let A'_hat := fft n' K ω A'
     let B'_hat := fft n' K ω B'
     let C'_hat : Vector (ZMod (2^n' + 1)) K :=
-      Vector.ofFn fun j => ssf sel n' (good_n_next (by omega) hKM hn') A'_hat[j] B'_hat[j]
+      Vector.ofFn fun j =>
+        ssf sel n' (good_n_next (by omega) hKM hn') A'_hat[j] B'_hat[j]
     let C' : Vector (ZMod (2^n' + 1)) K := ifft n' K ω C'_hat
-    let C : Vector (ZMod (2^n' + 1)) K := Vector.ofFn fun j => ψ⁻¹^j.val * C'[j]
+    let C : Vector (ZMod (2^n' + 1)) K :=
+      Vector.ofFn fun j => ψ⁻¹^j.val * C'[j]
     let Cℤ : Vector ℤ K := Vector.ofFn fun j =>
-      if C[j].val ≥ (j.val + 1) * 2^(2 * M) then C[j].val - (2^n' + 1) else C[j].val
+      if C[j].val ≥ (j.val + 1) * 2^(2 * M) then
+        C[j].val - (2^n' + 1)
+      else C[j].val
     ((∑ j : Fin K, Cℤ[j] * 2^(j.val * M) : ℤ) : ZMod (2^n + 1))
 termination_by n
 decreasing_by

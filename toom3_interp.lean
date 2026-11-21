@@ -126,7 +126,10 @@ def toom3 (β : Nat) (hβ : 2 ≤ β) (x y : Int) : Int :=
     c0 + c1 * β' + c2 * β' ^ 2 + c3 * β' ^ 3 + c4 * β' ^ 4
 termination_by nDigits β hβ (max x.natAbs y.natAbs)
 decreasing_by
-  all_goals (have hc := calls_lt β hβ x y n i β' (by omega) (lt_pow_nDigits β hβ _) rfl rfl)
+  all_goals
+    (have hc := calls_lt
+      β hβ x y n i β'
+      (by omega) (lt_pow_nDigits β hβ _) rfl rfl)
   · exact hc.1
   · exact hc.2.1
   · exact hc.2.2.1
